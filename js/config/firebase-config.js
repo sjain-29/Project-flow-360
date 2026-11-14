@@ -11,11 +11,11 @@
  * NEVER put a service-account key or any password in this repository.
  */
 export const firebaseConfig = {
-  apiKey: '',      // ← still needed: Project settings → General → Your apps → Web app → Config
+  apiKey: 'AIzaSyCjI4-lqbSQYrib6Sb-IpboUwyOiKOuyn4',      // ← still needed: Project settings → General → Your apps → Web app → Config
   authDomain: 'projectflow360-20945.firebaseapp.com',
   databaseURL: 'https://projectflow360-20945-default-rtdb.europe-west1.firebasedatabase.app',
   projectId: 'projectflow360-20945',
-  appId: '',       // ← still needed: same place as apiKey (looks like 1:123…:web:abc…)
+  appId: '1:217593527887:web:92880a8a9bf1c94877f43a',       // ← still needed: same place as apiKey (looks like 1:123…:web:abc…)
 };
 
 /**
