@@ -1,0 +1,2457 @@
+{
+ "rules": {
+  ".read": "root.child('acl/' + auth.uid + '/sa').val() === true",
+  "system": {
+   ".read": "auth != null",
+   "initialized": {
+    ".write": "auth != null && !data.exists() && (!root.child('system/initialized').exists() && root.child('system/bootstrapUid').val() === auth.uid)",
+    ".validate": "newData.val() === true"
+   }
+  },
+  "acl": {
+   "$uid": {
+    ".read": "auth != null && (auth.uid === $uid || root.child('acl/' + auth.uid + '/sa').val() === true)",
+    ".write": "auth != null && (root.child('acl/' + auth.uid + '/sa').val() === true || ((!root.child('system/initialized').exists() && root.child('system/bootstrapUid').val() === auth.uid) && $uid === auth.uid))",
+    ".validate": "newData.child('userId').isString() && newData.child('scope').isString()"
+   }
+  },
+  "users": {
+   ".read": "root.child('acl/' + auth.uid + '/userId').isString()",
+   "$userId": {
+    ".write": "(root.child('acl/' + auth.uid + '/sa').val() === true || (!root.child('system/initialized').exists() && root.child('system/bootstrapUid').val() === auth.uid))",
+    ".validate": "newData.hasChildren(['username', 'displayName', 'roleId'])",
+    "lastLoginAt": {
+     ".write": "root.child('acl/' + auth.uid + '/userId').val() === $userId",
+     ".validate": "newData.val() === now"
+    },
+    "lastLogoutAt": {
+     ".write": "root.child('acl/' + auth.uid + '/userId').val() === $userId",
+     ".validate": "newData.val() === now"
+    },
+    "mustChangePassword": {
+     ".write": "root.child('acl/' + auth.uid + '/userId').val() === $userId && newData.val() === false"
+    },
+    "passwordChangedAt": {
+     ".write": "root.child('acl/' + auth.uid + '/userId').val() === $userId",
+     ".validate": "newData.val() === now"
+    },
+    "prefs": {
+     ".write": "root.child('acl/' + auth.uid + '/userId').val() === $userId"
+    }
+   }
+  },
+  "loginIndex": {
+   ".read": "root.child('acl/' + auth.uid + '/sa').val() === true",
+   "$username": {
+    ".read": true,
+    ".write": "(root.child('acl/' + auth.uid + '/sa').val() === true || (!root.child('system/initialized').exists() && root.child('system/bootstrapUid').val() === auth.uid))",
+    ".validate": "newData.child('v').isNumber() && newData.child('userId').isString()",
+    "failed": {
+     ".write": "data.parent().child('v').exists()",
+     ".validate": "newData.isNumber() && (newData.val() === (data.exists() ? data.val() : 0) + 1 || (newData.val() === 0 && root.child('acl/' + auth.uid + '/userId').val() === data.parent().child('userId').val()))"
+    },
+    "lastFailedAt": {
+     ".write": "data.parent().child('v').exists()",
+     ".validate": "newData.val() === now"
+    },
+    "resetRequestedAt": {
+     ".write": "data.parent().child('v').exists() && newData.exists()",
+     ".validate": "newData.val() === now"
+    }
+   }
+  },
+  "roles": {
+   ".read": "root.child('acl/' + auth.uid + '/userId').isString()",
+   ".write": "(root.child('acl/' + auth.uid + '/sa').val() === true || (!root.child('system/initialized').exists() && root.child('system/bootstrapUid').val() === auth.uid))"
+  },
+  "departments": {
+   ".read": "root.child('acl/' + auth.uid + '/userId').isString()",
+   ".write": "(root.child('acl/' + auth.uid + '/sa').val() === true || (!root.child('system/initialized').exists() && root.child('system/bootstrapUid').val() === auth.uid))"
+  },
+  "settings": {
+   ".read": "root.child('acl/' + auth.uid + '/userId').isString()",
+   ".write": "(root.child('acl/' + auth.uid + '/sa').val() === true || (!root.child('system/initialized').exists() && root.child('system/bootstrapUid').val() === auth.uid))"
+  },
+  "projectIndex": {
+   "byManager": {
+    "$userId": {
+     ".read": "root.child('acl/' + auth.uid + '/userId').val() === $userId",
+     "$pid": {
+      ".write": "root.child('acl/' + auth.uid + '/p/projects/create').val() === true || root.child('acl/' + auth.uid + '/p/projects/edit').val() === true",
+      ".validate": "newData.isBoolean()"
+     }
+    }
+   },
+   "byDept": {
+    "$deptId": {
+     ".read": "root.child('acl/' + auth.uid + '/d/' + $deptId).val() === true",
+     "$pid": {
+      ".write": "root.child('acl/' + auth.uid + '/p/projects/create').val() === true || root.child('acl/' + auth.uid + '/p/projects/edit').val() === true",
+      ".validate": "newData.isBoolean()"
+     }
+    }
+   }
+  },
+  "counters": {
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/userId').isString() && ($pid === '_global' || (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true)))",
+    "$key": {
+     ".write": "root.child('acl/' + auth.uid + '/userId').isString() && ($pid === '_global' || (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || (!root.child('projects/' + $pid).exists() && root.child('acl/' + auth.uid + '/p/projects/create').val() === true) || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true)))",
+     ".validate": "newData.isNumber() && newData.val() > (data.exists() ? data.val() : 0)"
+    }
+   }
+  },
+  "activityLogs": {
+   "$pid": {
+    ".read": "$pid === '_global' ? root.child('acl/' + auth.uid + '/p/inventory/view').val() === true : (root.child('acl/' + auth.uid + '/p/activity/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true)))",
+    "$logId": {
+     ".write": "!data.exists() && newData.exists() && root.child('acl/' + auth.uid + '/userId').isString() && ($pid === '_global' || (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || (!root.child('projects/' + $pid).exists() && root.child('acl/' + auth.uid + '/p/projects/create').val() === true) || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true)))",
+     ".validate": "newData.child('at').val() === now && newData.child('uid').val() === root.child('acl/' + auth.uid + '/userId').val() && newData.hasChildren(['at', 'uid', 'name', 'action', 'rtype', 'rid'])",
+     "at": {
+      ".validate": "newData.isNumber()"
+     },
+     "uid": {
+      ".validate": "newData.isString()"
+     },
+     "name": {
+      ".validate": "newData.isString() && newData.val().length < 201"
+     },
+     "dept": {
+      ".validate": "newData.isString() && newData.val().length < 201"
+     },
+     "action": {
+      ".validate": "newData.isString() && newData.val().length < 301"
+     },
+     "rtype": {
+      ".validate": "newData.isString() && newData.val().length < 61"
+     },
+     "rid": {
+      ".validate": "newData.isString() && newData.val().length < 121"
+     },
+     "pid": {
+      ".validate": "newData.isString() && newData.val().length < 61"
+     },
+     "old": {
+      ".validate": "newData.isString() && newData.val().length < 20001"
+     },
+     "new": {
+      ".validate": "newData.isString() && newData.val().length < 20001"
+     },
+     "$other": {
+      ".validate": false
+     }
+    }
+   }
+  },
+  "auditLogs": {
+   "$logId": {
+    ".write": "!data.exists() && newData.exists() && root.child('acl/' + auth.uid + '/userId').isString()",
+    ".validate": "newData.child('at').val() === now && newData.child('uid').val() === root.child('acl/' + auth.uid + '/userId').val() && newData.hasChildren(['at', 'uid', 'name', 'action'])",
+    "at": {
+     ".validate": "newData.isNumber()"
+    },
+    "$field": {
+     ".validate": "newData.isString() && newData.val().length < 20001"
+    }
+   }
+  },
+  "notifications": {
+   "$userId": {
+    ".read": "root.child('acl/' + auth.uid + '/userId').val() === $userId",
+    "$id": {
+     ".write": "root.child('acl/' + auth.uid + '/userId').isString() && (root.child('acl/' + auth.uid + '/userId').val() === $userId || (!data.exists() && newData.exists() && newData.child('fromId').val() === root.child('acl/' + auth.uid + '/userId').val() && newData.child('at').val() === now))",
+     ".validate": "newData.hasChildren(['title', 'at']) && newData.child('title').isString() && newData.child('title').val().length < 301",
+     "body": {
+      ".validate": "newData.isString() && newData.val().length < 1001"
+     },
+     "link": {
+      ".validate": "newData.isString() && newData.val().length < 401"
+     }
+    }
+   }
+  },
+  "comments": {
+   "$pid": {
+    "$module": {
+     ".read": "root.child('acl/' + auth.uid + '/p/comments/view').val() === true && root.child('acl/' + auth.uid + '/p/comments/viewAll').val() === true && root.child('acl/' + auth.uid + '/p/' + $module + '/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+     "$dept": {
+      ".read": "root.child('acl/' + auth.uid + '/p/comments/view').val() === true && root.child('acl/' + auth.uid + '/p/' + $module + '/view').val() === true && root.child('acl/' + auth.uid + '/d/' + $dept).val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+      "$id": {
+       ".write": "newData.exists() && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true)) && root.child('acl/' + auth.uid + '/p/' + $module + '/view').val() === true && (data.exists() ? (data.child('userId').val() === root.child('acl/' + auth.uid + '/userId').val() && (root.child('acl/' + auth.uid + '/p/comments/edit').val() === true || root.child('acl/' + auth.uid + '/p/comments/delete').val() === true)) : (root.child('acl/' + auth.uid + '/p/comments/create').val() === true && root.child('acl/' + auth.uid + '/p/' + $module + '/comment').val() === true && root.child('acl/' + auth.uid + '/d/' + $dept).val() === true))",
+       ".validate": "newData.child('userId').val() === root.child('acl/' + auth.uid + '/userId').val() && newData.hasChildren(['rtype', 'rid', 'userId', 'userName', 'at']) && (data.exists() ? (newData.child('at').val() === data.child('at').val() && newData.child('rid').val() === data.child('rid').val()) : newData.child('at').val() === now) && (newData.child('deleted').val() === data.child('deleted').val() || root.child('acl/' + auth.uid + '/p/comments/delete').val() === true) && (newData.child('text').val() === data.child('text').val() || !data.exists() || root.child('acl/' + auth.uid + '/p/comments/edit').val() === true || newData.child('deleted').val() === true)",
+       "text": {
+        ".validate": "newData.isString() && newData.val().length < 5001"
+       },
+       "rtype": {
+        ".validate": "newData.isString() && newData.val().length < 61"
+       },
+       "rid": {
+        ".validate": "newData.isString() && newData.val().length < 121"
+       },
+       "userName": {
+        ".validate": "newData.isString() && newData.val().length < 201"
+       },
+       "dept": {
+        ".validate": "newData.isString() && newData.val().length < 201"
+       },
+       "userId": {
+        ".validate": "newData.isString()"
+       },
+       "at": {
+        ".validate": "newData.isNumber()"
+       },
+       "editedAt": {
+        ".validate": "newData.val() === now"
+       },
+       "deleted": {
+        ".validate": "newData.isBoolean()"
+       },
+       "$other": {
+        ".validate": false
+       }
+      }
+     }
+    }
+   }
+  },
+  "documents": {
+   "$pid": {
+    "$module": {
+     ".read": "root.child('acl/' + auth.uid + '/p/' + $module + '/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+     "$id": {
+      ".write": "newData.exists() && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true)) && (data.exists() ? (data.child('uploadedBy').val() === root.child('acl/' + auth.uid + '/userId').val() || root.child('acl/' + auth.uid + '/p/' + $module + '/delete').val() === true) : root.child('acl/' + auth.uid + '/p/' + $module + '/upload').val() === true)",
+      ".validate": "newData.hasChildren(['rtype', 'rid', 'name', 'kind', 'uploadedBy', 'at']) && (data.exists() ? (newData.child('at').val() === data.child('at').val() && newData.child('uploadedBy').val() === data.child('uploadedBy').val() && newData.child('name').val() === data.child('name').val() && newData.child('url').val() === data.child('url').val() && newData.child('rid').val() === data.child('rid').val()) : (newData.child('at').val() === now && newData.child('uploadedBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.child('kind').val() === 'link' || newData.child('kind').val() === 'file')",
+      "name": {
+       ".validate": "newData.isString() && newData.val().length < 201"
+      },
+      "mime": {
+       ".validate": "newData.isString() && newData.val().length < 151"
+      },
+      "category": {
+       ".validate": "newData.isString() && newData.val().length < 101"
+      },
+      "rtype": {
+       ".validate": "newData.isString() && newData.val().length < 61"
+      },
+      "rid": {
+       ".validate": "newData.isString() && newData.val().length < 121"
+      },
+      "uploadedByName": {
+       ".validate": "newData.isString() && newData.val().length < 201"
+      },
+      "kind": {
+       ".validate": "newData.isString()"
+      },
+      "url": {
+       ".validate": "newData.isString() && newData.val().length < 2001 && (newData.val().beginsWith('https://') || newData.val().beginsWith('http://'))"
+      },
+      "size": {
+       ".validate": "newData.isNumber() && newData.val() <= 800000"
+      },
+      "uploadedBy": {
+       ".validate": "newData.isString()"
+      },
+      "at": {
+       ".validate": "newData.isNumber()"
+      },
+      "deleted": {
+       ".validate": "newData.isBoolean()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     }
+    }
+   }
+  },
+  "documentBlobs": {
+   "$pid": {
+    "$module": {
+     "$id": {
+      ".read": "root.child('acl/' + auth.uid + '/p/' + $module + '/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+      ".write": "!data.exists() && newData.exists() && root.child('acl/' + auth.uid + '/p/' + $module + '/upload').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+      ".validate": "newData.isString() && newData.val().length < 1100001 && newData.parent().parent().parent().parent().child('documents/' + $pid + '/' + $module + '/' + $id + '/kind').val() === 'file'"
+     }
+    }
+   }
+  },
+  "projects": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/projects/view').val() === true",
+   "$id": {
+    ".read": "root.child('acl/' + auth.uid + '/p/projects/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $id).val() === true || root.child('projects/' + $id + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $id + '/core/departmentId').val()).val() === true))",
+    ".write": "auth != null && !data.exists() && newData.exists()",
+    "core": {
+     ".write": "(root.child('acl/' + auth.uid + '/p/projects/edit').val() === true)",
+     "name": {
+      ".validate": "newData.isString() && newData.val().length < 301"
+     },
+     "description": {
+      ".validate": "newData.isString() && newData.val().length < 5001"
+     },
+     "category": {
+      ".validate": "newData.isString()"
+     },
+     "managerId": {
+      ".validate": "newData.isString()"
+     },
+     "departmentId": {
+      ".validate": "newData.isString()"
+     },
+     "startDate": {
+      ".validate": "newData.isString() && newData.val().length === 10"
+     },
+     "targetDate": {
+      ".validate": "newData.isString() && newData.val().length === 10"
+     },
+     "priority": {
+      ".validate": "newData.isString()"
+     },
+     "budget": {
+      ".validate": "newData.isNumber() && newData.val() >= 0"
+     },
+     "remarks": {
+      ".validate": "newData.isString() && newData.val().length < 5001"
+     },
+     "archived": {
+      ".validate": "newData.isBoolean()"
+     },
+     "clonedFrom": {},
+     "$other": {
+      ".validate": false
+     }
+    },
+    "status": {
+     ".write": "((root.child('acl/' + auth.uid + '/p/projects/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/closure/approve').val() === true))",
+     "status": {
+      ".validate": "newData.isString()"
+     },
+     "$other": {
+      ".validate": false
+     }
+    },
+    "meta": {
+     ".write": "auth != null",
+     "createdAt": {
+      ".validate": "newData.isNumber()"
+     },
+     "updatedAt": {
+      ".validate": "newData.isNumber()"
+     },
+     "createdBy": {
+      ".validate": "newData.isString()"
+     },
+     "updatedBy": {
+      ".validate": "newData.isString()"
+     },
+     "_v": {
+      ".validate": "newData.isNumber()"
+     },
+     "_log": {
+      ".validate": "newData.isString()"
+     },
+     "$other": {
+      ".validate": false
+     }
+    },
+    "$other": {
+     ".validate": false
+    },
+    ".validate": "(((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $id).val() === true || (!root.child('projects/' + $id).exists() && root.child('acl/' + auth.uid + '/p/projects/create').val() === true) || root.child('projects/' + $id + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $id + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().child('activityLogs/' + $id + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().child('activityLogs/' + $id + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['name', 'managerId', 'departmentId', 'startDate', 'targetDate', 'priority'])) && (newData.child('status').hasChildren(['status'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/projects/create').val() === true) && ((((newData.child('status/status').val() === 'Planning' || newData.child('status/status').val() === 'Active' || newData.child('status/status').val() === 'On Hold')) || ((root.child('acl/' + auth.uid + '/p/projects/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/closure/approve').val() === true)))))))) && ($id.matches(/^[A-Z0-9][A-Z0-9-]{1,23}$/)) && ((((newData.child('status/status').val() === data.child('status/status').val())) || ((((!(newData.child('status/status').val() === 'Completed')) || ((root.child('acl/' + auth.uid + '/p/closure/approve').val() === true) && (newData.parent().parent().child('closures/' + $id + '/completion/meta/updatedAt').val() === now)))) && (((!(newData.child('status/status').val() === 'Cancelled')) || ((root.child('acl/' + auth.uid + '/p/closure/approve').val() === true) && (newData.parent().parent().child('closures/' + $id + '/cancellation/meta/updatedAt').val() === now)))) && (((!data.exists()) || (!(data.child('status/status').val() === 'Completed' || data.child('status/status').val() === 'Cancelled')) || ((root.child('acl/' + auth.uid + '/p/closure/approve').val() === true) && (newData.parent().parent().child('closures/' + $id + '/reopen/meta/updatedAt').val() === now)))) && ((((newData.child('status/status').val() === 'Completed' || newData.child('status/status').val() === 'Cancelled')) || (!data.exists()) || ((data.child('status/status').val() === 'Completed' || data.child('status/status').val() === 'Cancelled')) || (root.child('acl/' + auth.uid + '/p/projects/updateStatus').val() === true))))))"
+   }
+  },
+  "inventory": {
+   ".read": "root.child('acl/' + auth.uid + '/p/inventory/view').val() === true",
+   "$id": {
+    ".write": "auth != null && !data.exists() && newData.exists()",
+    "core": {
+     ".write": "(root.child('acl/' + auth.uid + '/p/inventory/edit').val() === true)",
+     "itemCode": {
+      ".validate": "newData.isString() && newData.val().length < 61"
+     },
+     "itemName": {
+      ".validate": "newData.isString() && newData.val().length < 301"
+     },
+     "deptId": {
+      ".validate": "newData.isString()"
+     },
+     "location": {
+      ".validate": "newData.isString() && newData.val().length < 301"
+     },
+     "uom": {
+      ".validate": "newData.isString()"
+     },
+     "remarks": {
+      ".validate": "newData.isString() && newData.val().length < 5001"
+     },
+     "$other": {
+      ".validate": false
+     }
+    },
+    "qty": {
+     ".write": "((root.child('acl/' + auth.uid + '/p/inventory/create').val() === true || root.child('acl/' + auth.uid + '/p/inventory/edit').val() === true || root.child('acl/' + auth.uid + '/p/transfers/create').val() === true || root.child('acl/' + auth.uid + '/p/transfers/edit').val() === true || root.child('acl/' + auth.uid + '/p/transfers/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/receipts/create').val() === true))",
+     "onHand": {
+      ".validate": "newData.isNumber() && newData.val() >= 0"
+     },
+     "reserved": {
+      ".validate": "newData.isNumber() && newData.val() >= 0"
+     },
+     "$other": {
+      ".validate": false
+     }
+    },
+    "meta": {
+     ".write": "auth != null",
+     "createdAt": {
+      ".validate": "newData.isNumber()"
+     },
+     "updatedAt": {
+      ".validate": "newData.isNumber()"
+     },
+     "createdBy": {
+      ".validate": "newData.isString()"
+     },
+     "updatedBy": {
+      ".validate": "newData.isString()"
+     },
+     "_v": {
+      ".validate": "newData.isNumber()"
+     },
+     "_log": {
+      ".validate": "newData.isString()"
+     },
+     "$other": {
+      ".validate": false
+     }
+    },
+    "$other": {
+     ".validate": false
+    },
+    ".validate": "((root.child('acl/' + auth.uid + '/userId').isString()) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().child('activityLogs/' + '_global' + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().child('activityLogs/' + '_global' + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['itemCode', 'itemName', 'deptId'])) && (newData.child('qty').hasChildren(['onHand'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/inventory/create').val() === true) && (((newData.child('qty/onHand').val() === 0 && newData.child('qty/reserved').val() === 0) || ((root.child('acl/' + auth.uid + '/p/inventory/create').val() === true || root.child('acl/' + auth.uid + '/p/inventory/edit').val() === true || root.child('acl/' + auth.uid + '/p/transfers/create').val() === true || root.child('acl/' + auth.uid + '/p/transfers/edit').val() === true || root.child('acl/' + auth.uid + '/p/transfers/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/receipts/create').val() === true)))))))) && (newData.child('qty/reserved').val() <= newData.child('qty/onHand').val() + 0.001)"
+   }
+  },
+  "projectItems": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/items/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/items/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/items/edit').val() === true)",
+      "itemCode": {
+       ".validate": "newData.isString() && newData.val().length < 61"
+      },
+      "name": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "description": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "requiredQty": {
+       ".validate": "newData.isNumber() && newData.val() > 0"
+      },
+      "uom": {
+       ".validate": "newData.isString()"
+      },
+      "specs": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "priority": {
+       ".validate": "newData.isString()"
+      },
+      "preferredVendor": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "estUnitCost": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "requiredBy": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "status": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/items/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/closure/approve').val() === true || root.child('acl/' + auth.uid + '/p/closure/updateStatus').val() === true))",
+      "itemStatus": {},
+      "closedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "closedBy": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "del": {
+      ".write": "root.child('acl/' + auth.uid + '/p/items/delete').val() === true",
+      "deleted": {
+       ".validate": "newData.isBoolean()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['itemCode', 'name', 'requiredQty', 'uom'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/items/create').val() === true) && ((((newData.child('status/itemStatus').val() === 'Open') && !newData.child('status/closedAt').exists() && !newData.child('status/closedBy').exists()) || ((root.child('acl/' + auth.uid + '/p/items/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/closure/approve').val() === true || root.child('acl/' + auth.uid + '/p/closure/updateStatus').val() === true)))) && (!newData.child('del').exists()))))"
+    }
+   }
+  },
+  "inventoryChecks": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/inventory/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/inventory/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/inventory/edit').val() === true)",
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "availability": {},
+      "requiredQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "availableQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "transferQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "shortageQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "sourceDeptId": {
+       ".validate": "newData.isString()"
+      },
+      "stockLocation": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "stockRef": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "stockId": {},
+      "verifiedAt": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "verifiedBy": {},
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['availableQty', 'verifiedAt'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/inventory/create').val() === true)))) && (newData.child('core/transferQty').val() <= newData.child('core/availableQty').val() + 0.001) && (((newData.child('core/transferQty').val() + newData.child('core/shortageQty').val() - newData.child('core/requiredQty').val()) < 0.001 && (newData.child('core/transferQty').val() + newData.child('core/shortageQty').val() - newData.child('core/requiredQty').val()) > -0.001))"
+    }
+   }
+  },
+  "stockTransfers": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/transfers/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/transfers/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/transfers/edit').val() === true)",
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "qty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "sourceDeptId": {},
+      "destDeptId": {},
+      "stockId": {},
+      "requirementId": {},
+      "adjustReason": {},
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "status": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/transfers/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/transfers/edit').val() === true || root.child('acl/' + auth.uid + '/p/transfers/approve').val() === true))",
+      "status": {},
+      "cancelReason": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "approval": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/transfers/approve').val() === true)",
+      "decision": {},
+      "approverId": {},
+      "approverName": {},
+      "decisionAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "approvalRemarks": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "move": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/transfers/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/transfers/edit').val() === true))",
+      "dispatchedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "dispatchDate": {},
+      "receivedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "acceptedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "rejectedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "receiptDate": {},
+      "receivedBy": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (((data.exists()) || (((root.child('acl/' + auth.uid + '/p/inventory/create').val() === true || root.child('acl/' + auth.uid + '/p/inventory/edit').val() === true || root.child('acl/' + auth.uid + '/p/transfers/create').val() === true)) && ((((newData.child('status/status').val() === 'Requested') && !newData.child('status/cancelReason').exists()) || ((root.child('acl/' + auth.uid + '/p/transfers/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/transfers/edit').val() === true || root.child('acl/' + auth.uid + '/p/transfers/approve').val() === true)))) && (((!newData.child('approval/decision').exists() && !newData.child('approval/approverId').exists() && !newData.child('approval/approverName').exists() && !newData.child('approval/decisionAt').exists() && !newData.child('approval/approvalRemarks').exists()) || (root.child('acl/' + auth.uid + '/p/transfers/approve').val() === true))) && (((newData.child('move/dispatchedQty').val() === 0 && !newData.child('move/dispatchDate').exists() && newData.child('move/receivedQty').val() === 0 && newData.child('move/acceptedQty').val() === 0 && newData.child('move/rejectedQty').val() === 0 && !newData.child('move/receiptDate').exists() && !newData.child('move/receivedBy').exists()) || ((root.child('acl/' + auth.uid + '/p/transfers/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/transfers/edit').val() === true))))))) && (((data.exists()) || ((newData.parent().parent().parent().child('procurement/' + $pid + '/' + newData.child('core/requirementId').val() + '/core/transferId').val() === $id) && (newData.parent().parent().parent().child('procurement/' + $pid + '/' + newData.child('core/requirementId').val() + '/core/type').val() === 'Source Stock Replenishment') && (((newData.parent().parent().parent().child('procurement/' + $pid + '/' + newData.child('core/requirementId').val() + '/core/qty').val() - newData.child('core/qty').val()) < 0.001 && (newData.parent().parent().parent().child('procurement/' + $pid + '/' + newData.child('core/requirementId').val() + '/core/qty').val() - newData.child('core/qty').val()) > -0.001)) && (newData.child('core/qty').val() > 0)))) && (((!data.exists()) || (((newData.child('core/qty').val() === data.child('core/qty').val())) && (((!(newData.child('status/status').val() === 'Cancelled')) || ((data.child('status/status').val() === 'Cancelled'))))) || ((newData.parent().parent().parent().child('procurement/' + $pid + '/' + data.child('core/requirementId').val() + '/flow/status').val() === 'Under Review' || newData.parent().parent().parent().child('procurement/' + $pid + '/' + data.child('core/requirementId').val() + '/flow/status').val() === 'Cancelled')))) && (((!data.exists()) || ((newData.child('core/requirementId').val() === data.child('core/requirementId').val())))) && ((((newData.child('status/status').val() === data.child('status/status').val())) || (!(newData.child('status/status').val() === 'Approved' || newData.child('status/status').val() === 'Rejected')) || (root.child('acl/' + auth.uid + '/p/transfers/approve').val() === true))) && (newData.child('move/dispatchedQty').val() <= newData.child('core/qty').val() + 0.001) && (newData.child('move/receivedQty').val() <= newData.child('move/dispatchedQty').val() + 0.001) && (((newData.child('move/acceptedQty').val() + newData.child('move/rejectedQty').val() - newData.child('move/receivedQty').val()) < 0.001 && (newData.child('move/acceptedQty').val() + newData.child('move/rejectedQty').val() - newData.child('move/receivedQty').val()) > -0.001))"
+    }
+   }
+  },
+  "procurement": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/procurement/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/procurement/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/procurement/approve').val() === true)",
+      "type": {},
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "qty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "sourceDeptId": {},
+      "transferId": {},
+      "origin": {},
+      "reason": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "flow": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/pr/create').val() === true || root.child('acl/' + auth.uid + '/p/pr/approve').val() === true || root.child('acl/' + auth.uid + '/p/procurement/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/procurement/approve').val() === true || root.child('acl/' + auth.uid + '/p/procurement/edit').val() === true || root.child('acl/' + auth.uid + '/p/transfers/edit').val() === true || root.child('acl/' + auth.uid + '/p/transfers/updateStatus').val() === true))",
+      "status": {},
+      "prId": {},
+      "reviewReason": {},
+      "reviewDecision": {},
+      "reviewedBy": {},
+      "reviewedByName": {},
+      "reviewedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "reviewRemarks": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (((data.exists()) || (((root.child('acl/' + auth.uid + '/p/inventory/create').val() === true || root.child('acl/' + auth.uid + '/p/inventory/edit').val() === true || root.child('acl/' + auth.uid + '/p/procurement/create').val() === true || root.child('acl/' + auth.uid + '/p/development/create').val() === true || root.child('acl/' + auth.uid + '/p/development/edit').val() === true)) && ((((newData.child('flow/status').val() === 'Open' || newData.child('flow/status').val() === 'Pending Approval') && !newData.child('flow/prId').exists() && !newData.child('flow/reviewReason').exists() && !newData.child('flow/reviewDecision').exists() && !newData.child('flow/reviewedBy').exists() && !newData.child('flow/reviewedByName').exists() && !newData.child('flow/reviewedAt').exists() && !newData.child('flow/reviewRemarks').exists()) || ((root.child('acl/' + auth.uid + '/p/pr/create').val() === true || root.child('acl/' + auth.uid + '/p/pr/approve').val() === true || root.child('acl/' + auth.uid + '/p/procurement/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/procurement/approve').val() === true || root.child('acl/' + auth.uid + '/p/procurement/edit').val() === true || root.child('acl/' + auth.uid + '/p/transfers/edit').val() === true || root.child('acl/' + auth.uid + '/p/transfers/updateStatus').val() === true))))))) && (((data.exists()) || (((newData.child('core/type').val() === 'Project Requirement' || newData.child('core/type').val() === 'Source Stock Replenishment')) && (newData.child('core/qty').val() > 0) && ((((newData.child('flow/status').val() === 'Open')) || ((newData.child('flow/status').val() === 'Pending Approval')))) && (((newData.child('core/origin').val() !== 'Additional Material') || ((newData.child('flow/status').val() === 'Pending Approval')) || (root.child('acl/' + auth.uid + '/p/procurement/approve').val() === true))) && (((newData.child('core/type').val() !== 'Source Stock Replenishment') || (newData.parent().parent().parent().child('stockTransfers/' + $pid + '/' + newData.child('core/transferId').val() + '/core/requirementId').val() === $id)))))) && (((!data.exists()) || (((newData.child('core/type').val() === data.child('core/type').val())) && ((newData.child('core/transferId').val() === data.child('core/transferId').val())) && ((newData.child('core/itemId').val() === data.child('core/itemId').val()))))) && (((!data.exists()) || ((newData.child('flow/status').val() === data.child('flow/status').val())) || ((!(data.child('flow/status').val() === 'Under Review')) && (!(data.child('flow/status').val() === 'Pending Approval')) && (!(newData.child('flow/status').val() === 'Cancelled')) && (!(newData.child('flow/status').val() === 'Rejected'))) || (root.child('acl/' + auth.uid + '/p/procurement/approve').val() === true)))"
+    }
+   }
+  },
+  "purchaseRequests": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/pr/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/pr/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/pr/edit').val() === true) && (data.parent().child('status/status').val() !== 'Approved')",
+      "requirementId": {},
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "qty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "procurementType": {},
+      "sourceDeptId": {},
+      "purpose": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "requestingDeptId": {
+       ".validate": "newData.isString()"
+      },
+      "requestDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "requiredBy": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "requestedBy": {},
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "status": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/pr/create').val() === true || root.child('acl/' + auth.uid + '/p/pr/edit').val() === true || root.child('acl/' + auth.uid + '/p/pr/approve').val() === true))",
+      "status": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "approval": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/pr/approve').val() === true)",
+      "decision": {},
+      "approverId": {},
+      "approverName": {},
+      "decisionAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "rejectionReason": {},
+      "approvalComments": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "selection": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/quotations/approve').val() === true || root.child('acl/' + auth.uid + '/p/quotations/updateStatus').val() === true))",
+      "selectedQuotationId": {},
+      "selectionJustification": {},
+      "selectedBy": {},
+      "selectedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "agg": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/po/create').val() === true || root.child('acl/' + auth.uid + '/p/po/edit').val() === true))",
+      "orderedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['purpose', 'requestingDeptId', 'requestDate'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/pr/create').val() === true) && (((!newData.child('status/status').exists()) || ((root.child('acl/' + auth.uid + '/p/pr/create').val() === true || root.child('acl/' + auth.uid + '/p/pr/edit').val() === true || root.child('acl/' + auth.uid + '/p/pr/approve').val() === true)))) && (((!newData.child('approval/decision').exists() && !newData.child('approval/approverId').exists() && !newData.child('approval/approverName').exists() && !newData.child('approval/decisionAt').exists() && !newData.child('approval/rejectionReason').exists() && !newData.child('approval/approvalComments').exists()) || (root.child('acl/' + auth.uid + '/p/pr/approve').val() === true))) && (((!newData.child('selection/selectedQuotationId').exists() && !newData.child('selection/selectionJustification').exists() && !newData.child('selection/selectedBy').exists() && !newData.child('selection/selectedAt').exists()) || ((root.child('acl/' + auth.uid + '/p/quotations/approve').val() === true || root.child('acl/' + auth.uid + '/p/quotations/updateStatus').val() === true)))) && (((newData.child('agg/orderedQty').val() === 0) || ((root.child('acl/' + auth.uid + '/p/po/create').val() === true || root.child('acl/' + auth.uid + '/p/po/edit').val() === true))))))) && (((data.exists()) || ((root.child('procurement/' + $pid + '/' + newData.child('core/requirementId').val() + '/flow/status').val() === 'Open') && (newData.parent().parent().parent().child('procurement/' + $pid + '/' + newData.child('core/requirementId').val() + '/flow/prId').val() === $id) && (newData.child('core/qty').val() > 0 && newData.child('core/qty').val() <= root.child('procurement/' + $pid + '/' + newData.child('core/requirementId').val() + '/core/qty').val() + 0.001) && ((newData.child('status/status').val() === 'Pending Approval'))))) && ((((newData.child('status/status').val() === data.child('status/status').val())) || (!(newData.child('status/status').val() === 'Approved' || newData.child('status/status').val() === 'Rejected' || newData.child('status/status').val() === 'Changes Requested')) || (root.child('acl/' + auth.uid + '/p/pr/approve').val() === true))) && (((!data.exists()) || (!(data.child('status/status').val() === 'Approved')) || ((newData.child('status/status').val() === data.child('status/status').val())) || (root.child('acl/' + auth.uid + '/p/pr/approve').val() === true))) && (newData.child('agg/orderedQty').val() <= newData.child('core/qty').val() + 0.001)"
+    }
+   }
+  },
+  "quotations": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/quotations/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/quotations/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/quotations/edit').val() === true)",
+      "prId": {},
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "qty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "vendorName": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "vendorContact": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "quotationNumber": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "quotationDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "unitPrice": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "gstPercent": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "shippingCharges": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "otherCharges": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "deliveryTime": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "validity": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "paymentTerms": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "totalAmount": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "selection": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/quotations/approve').val() === true || root.child('acl/' + auth.uid + '/p/quotations/updateStatus').val() === true))",
+      "selected": {
+       ".validate": "newData.isBoolean()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "del": {
+      ".write": "root.child('acl/' + auth.uid + '/p/quotations/delete').val() === true",
+      "deleted": {
+       ".validate": "newData.isBoolean()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['vendorName', 'unitPrice'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/quotations/create').val() === true) && (((!newData.child('selection/selected').exists()) || ((root.child('acl/' + auth.uid + '/p/quotations/approve').val() === true || root.child('acl/' + auth.uid + '/p/quotations/updateStatus').val() === true)))) && (!newData.child('del').exists())))) && (((data.exists()) || (root.child('purchaseRequests/' + $pid + '/' + newData.child('core/prId').val() + '/status/status').val() === 'Approved'))) && (((!data.exists()) || ((newData.child('core/prId').val() === data.child('core/prId').val())))) && (((newData.child('selection/selected').val() !== true) || (newData.parent().parent().parent().child('purchaseRequests/' + $pid + '/' + newData.child('core/prId').val() + '/selection/selectedQuotationId').val() === $id)))"
+    }
+   }
+  },
+  "purchaseOrders": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/po/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/po/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/po/edit').val() === true)",
+      "prId": {},
+      "quotationId": {},
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "procurementType": {},
+      "sourceDeptId": {},
+      "vendorName": {},
+      "poDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "quantity": {
+       ".validate": "newData.isNumber() && newData.val() > 0"
+      },
+      "unitPrice": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "taxPercent": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "otherCharges": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "totalValue": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "deliveryAddress": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "deliveryDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "paymentTerms": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "status": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/po/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/po/edit').val() === true))",
+      "status": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "pay": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/payments/create').val() === true || root.child('acl/' + auth.uid + '/p/payments/edit').val() === true || root.child('acl/' + auth.uid + '/p/payments/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/payments/approve').val() === true))",
+      "paidTotal": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "adjTotal": {
+       ".validate": "newData.isNumber()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "disp": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/dispatch/create').val() === true || root.child('acl/' + auth.uid + '/p/dispatch/edit').val() === true))",
+      "dispatchedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "rcpt": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/receipts/create').val() === true || root.child('acl/' + auth.uid + '/p/receipts/edit').val() === true))",
+      "receivedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "acceptedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "rejectedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['poDate', 'quantity', 'unitPrice'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/po/create').val() === true) && ((((newData.child('status/status').val() === 'Issued')) || ((root.child('acl/' + auth.uid + '/p/po/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/po/edit').val() === true)))) && (((newData.child('pay/paidTotal').val() === 0 && newData.child('pay/adjTotal').val() === 0) || ((root.child('acl/' + auth.uid + '/p/payments/create').val() === true || root.child('acl/' + auth.uid + '/p/payments/edit').val() === true || root.child('acl/' + auth.uid + '/p/payments/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/payments/approve').val() === true)))) && (((newData.child('disp/dispatchedQty').val() === 0) || ((root.child('acl/' + auth.uid + '/p/dispatch/create').val() === true || root.child('acl/' + auth.uid + '/p/dispatch/edit').val() === true)))) && (((newData.child('rcpt/receivedQty').val() === 0 && newData.child('rcpt/acceptedQty').val() === 0 && newData.child('rcpt/rejectedQty').val() === 0) || ((root.child('acl/' + auth.uid + '/p/receipts/create').val() === true || root.child('acl/' + auth.uid + '/p/receipts/edit').val() === true))))))) && (((data.exists()) || ((root.child('purchaseRequests/' + $pid + '/' + newData.child('core/prId').val() + '/status/status').val() === 'Approved') && (root.child('purchaseRequests/' + $pid + '/' + newData.child('core/prId').val() + '/selection/selectedQuotationId').val() === newData.child('core/quotationId').val()) && ((newData.child('status/status').val() === 'Issued'))))) && (((!data.exists()) || (((newData.child('core/prId').val() === data.child('core/prId').val())) && ((newData.child('core/quotationId').val() === data.child('core/quotationId').val()))))) && (((newData.parent().parent().parent().child('purchaseRequests/' + $pid + '/' + newData.child('core/prId').val() + '/agg/orderedQty').val() - root.child('purchaseRequests/' + $pid + '/' + newData.child('core/prId').val() + '/agg/orderedQty').val() - ((newData.child('status/status').val() !== 'Cancelled' ? newData.child('core/quantity').val() : 0) - (data.exists() ? (data.child('status/status').val() !== 'Cancelled' ? data.child('core/quantity').val() : 0) : 0))) < 0.001 && (newData.parent().parent().parent().child('purchaseRequests/' + $pid + '/' + newData.child('core/prId').val() + '/agg/orderedQty').val() - root.child('purchaseRequests/' + $pid + '/' + newData.child('core/prId').val() + '/agg/orderedQty').val() - ((newData.child('status/status').val() !== 'Cancelled' ? newData.child('core/quantity').val() : 0) - (data.exists() ? (data.child('status/status').val() !== 'Cancelled' ? data.child('core/quantity').val() : 0) : 0))) > -0.001)) && (newData.child('pay/paidTotal').val() <= newData.child('core/totalValue').val() + newData.child('pay/adjTotal').val() + 0.001) && (newData.child('disp/dispatchedQty').val() <= newData.child('core/quantity').val() + 0.001) && (newData.child('rcpt/receivedQty').val() <= newData.child('disp/dispatchedQty').val() + 0.001) && (((newData.child('rcpt/acceptedQty').val() + newData.child('rcpt/rejectedQty').val() - newData.child('rcpt/receivedQty').val()) < 0.001 && (newData.child('rcpt/acceptedQty').val() + newData.child('rcpt/rejectedQty').val() - newData.child('rcpt/receivedQty').val()) > -0.001))"
+    }
+   }
+  },
+  "proformaInvoices": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/pi/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/pi/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/pi/edit').val() === true)",
+      "poId": {},
+      "vendorName": {},
+      "piNumber": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "piDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "amount": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "tax": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "totalAmount": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "del": {
+      ".write": "root.child('acl/' + auth.uid + '/p/pi/delete').val() === true",
+      "deleted": {
+       ".validate": "newData.isBoolean()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['piNumber', 'piDate', 'amount'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/pi/create').val() === true) && (!newData.child('del').exists())))) && (((data.exists()) || (root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/status/status').val() !== null))) && (((!data.exists()) || ((newData.child('core/poId').val() === data.child('core/poId').val()))))"
+    }
+   }
+  },
+  "payments": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/payments/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/payments/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/payments/edit').val() === true)",
+      "poId": {},
+      "vendorName": {},
+      "piId": {
+       ".validate": "newData.isString()"
+      },
+      "paymentDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "amount": {
+       ".validate": "newData.isNumber() && newData.val() > 0 && (!data.exists() || newData.val() === data.val())"
+      },
+      "mode": {
+       ".validate": "newData.isString()"
+      },
+      "transactionRef": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "status": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/payments/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/payments/edit').val() === true || root.child('acl/' + auth.uid + '/p/payments/create').val() === true))",
+      "status": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['paymentDate', 'amount', 'mode'])) && (newData.child('status').hasChildren(['status'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/payments/create').val() === true) && (((!newData.child('status/status').exists()) || ((root.child('acl/' + auth.uid + '/p/payments/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/payments/edit').val() === true || root.child('acl/' + auth.uid + '/p/payments/create').val() === true))))))) && (((!data.exists()) || ((newData.child('core/poId').val() === data.child('core/poId').val())))) && (((newData.parent().parent().parent().child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/pay/paidTotal').val() - root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/pay/paidTotal').val() - ((newData.child('status/status').val() === 'Successful' ? newData.child('core/amount').val() : 0) - (data.exists() ? (data.child('status/status').val() === 'Successful' ? data.child('core/amount').val() : 0) : 0))) < 0.001 && (newData.parent().parent().parent().child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/pay/paidTotal').val() - root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/pay/paidTotal').val() - ((newData.child('status/status').val() === 'Successful' ? newData.child('core/amount').val() : 0) - (data.exists() ? (data.child('status/status').val() === 'Successful' ? data.child('core/amount').val() : 0) : 0))) > -0.001))"
+    }
+   }
+  },
+  "paymentAdjustments": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/payments/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/payments/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      "poId": {},
+      "amount": {
+       ".validate": "newData.isNumber() && (!data.exists() || newData.val() === data.val())"
+      },
+      "reason": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "approvedBy": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['amount', 'reason'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/payments/approve').val() === true)))) && (((data.exists()) || (newData.child('core/reason').val().length >= 5))) && (((newData.parent().parent().parent().child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/pay/adjTotal').val() - root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/pay/adjTotal').val() - ((data.exists() ? 0 : newData.child('core/amount').val()))) < 0.001 && (newData.parent().parent().parent().child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/pay/adjTotal').val() - root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/pay/adjTotal').val() - ((data.exists() ? 0 : newData.child('core/amount').val()))) > -0.001))"
+    }
+   }
+  },
+  "dispatches": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/dispatch/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/dispatch/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/dispatch/edit').val() === true)",
+      "poId": {},
+      "vendorName": {},
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "procurementType": {},
+      "dispatchDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "qty": {
+       ".validate": "newData.isNumber() && newData.val() > 0 && (!data.exists() || newData.val() === data.val())"
+      },
+      "courier": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "trackingNumber": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "lrNumber": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "challanNumber": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "expectedDelivery": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "trackingLink": {
+       ".validate": "newData.isString() && newData.val().length < 1001"
+      },
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "rcpt": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/receipts/create').val() === true || root.child('acl/' + auth.uid + '/p/receipts/edit').val() === true))",
+      "receivedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['dispatchDate', 'qty'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/dispatch/create').val() === true) && (((newData.child('rcpt/receivedQty').val() === 0) || ((root.child('acl/' + auth.uid + '/p/receipts/create').val() === true || root.child('acl/' + auth.uid + '/p/receipts/edit').val() === true))))))) && (((data.exists()) || (root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/status/status').val() === 'Issued'))) && (((!data.exists()) || ((newData.child('core/poId').val() === data.child('core/poId').val())))) && (((newData.parent().parent().parent().child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/disp/dispatchedQty').val() - root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/disp/dispatchedQty').val() - ((data.exists() ? 0 : newData.child('core/qty').val()))) < 0.001 && (newData.parent().parent().parent().child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/disp/dispatchedQty').val() - root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/disp/dispatchedQty').val() - ((data.exists() ? 0 : newData.child('core/qty').val()))) > -0.001)) && (newData.child('rcpt/receivedQty').val() <= newData.child('core/qty').val() + 0.001)"
+    }
+   }
+  },
+  "materialReceipts": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/receipts/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/receipts/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/receipts/edit').val() === true)",
+      "poId": {},
+      "dispatchId": {},
+      "vendorName": {},
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "procurementType": {},
+      "receiptLocation": {},
+      "receiptDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "receivedQty": {
+       ".validate": "newData.isNumber() && newData.val() > 0 && (!data.exists() || newData.val() === data.val())"
+      },
+      "acceptedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0 && (!data.exists() || newData.val() === data.val())"
+      },
+      "rejectedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0 && (!data.exists() || newData.val() === data.val())"
+      },
+      "inspectionStatus": {
+       ".validate": "newData.isString()"
+      },
+      "challanNumber": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "damageDetails": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "shortageDetails": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "inspectionRemarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['receiptDate', 'receivedQty', 'acceptedQty', 'rejectedQty'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/receipts/create').val() === true)))) && (((!data.exists()) || (((newData.child('core/poId').val() === data.child('core/poId').val())) && ((newData.child('core/dispatchId').val() === data.child('core/dispatchId').val()))))) && (((newData.child('core/acceptedQty').val() + newData.child('core/rejectedQty').val() - newData.child('core/receivedQty').val()) < 0.001 && (newData.child('core/acceptedQty').val() + newData.child('core/rejectedQty').val() - newData.child('core/receivedQty').val()) > -0.001)) && (((newData.parent().parent().parent().child('dispatches/' + $pid + '/' + newData.child('core/dispatchId').val() + '/rcpt/receivedQty').val() - root.child('dispatches/' + $pid + '/' + newData.child('core/dispatchId').val() + '/rcpt/receivedQty').val() - ((data.exists() ? 0 : newData.child('core/receivedQty').val()))) < 0.001 && (newData.parent().parent().parent().child('dispatches/' + $pid + '/' + newData.child('core/dispatchId').val() + '/rcpt/receivedQty').val() - root.child('dispatches/' + $pid + '/' + newData.child('core/dispatchId').val() + '/rcpt/receivedQty').val() - ((data.exists() ? 0 : newData.child('core/receivedQty').val()))) > -0.001)) && (((newData.parent().parent().parent().child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/rcpt/receivedQty').val() - root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/rcpt/receivedQty').val() - ((data.exists() ? 0 : newData.child('core/receivedQty').val()))) < 0.001 && (newData.parent().parent().parent().child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/rcpt/receivedQty').val() - root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/rcpt/receivedQty').val() - ((data.exists() ? 0 : newData.child('core/receivedQty').val()))) > -0.001)) && (((newData.parent().parent().parent().child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/rcpt/acceptedQty').val() - root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/rcpt/acceptedQty').val() - ((data.exists() ? 0 : newData.child('core/acceptedQty').val()))) < 0.001 && (newData.parent().parent().parent().child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/rcpt/acceptedQty').val() - root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/rcpt/acceptedQty').val() - ((data.exists() ? 0 : newData.child('core/acceptedQty').val()))) > -0.001)) && (((newData.parent().parent().parent().child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/rcpt/rejectedQty').val() - root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/rcpt/rejectedQty').val() - ((data.exists() ? 0 : newData.child('core/rejectedQty').val()))) < 0.001 && (newData.parent().parent().parent().child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/rcpt/rejectedQty').val() - root.child('purchaseOrders/' + $pid + '/' + newData.child('core/poId').val() + '/rcpt/rejectedQty').val() - ((data.exists() ? 0 : newData.child('core/rejectedQty').val()))) > -0.001))"
+    }
+   }
+  },
+  "materialRequests": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/mr/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/mr/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/mr/edit').val() === true)",
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "qtyRequested": {
+       ".validate": "newData.isNumber() && newData.val() > 0"
+      },
+      "availableSpifQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "requestDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "requestedBy": {},
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "status": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/mr/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/mr/edit').val() === true || root.child('acl/' + auth.uid + '/p/mr/approve').val() === true || root.child('acl/' + auth.uid + '/p/gvt/create').val() === true))",
+      "status": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "approval": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/mr/approve').val() === true)",
+      "decision": {},
+      "approverId": {},
+      "approverName": {},
+      "decisionAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "approvalRemarks": {},
+      "approvedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "move": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/mr/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/mr/edit').val() === true))",
+      "preparedAt": {},
+      "dispatchedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "dispatchDate": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "rcpt": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/gvt/create').val() === true || root.child('acl/' + auth.uid + '/p/gvt/edit').val() === true))",
+      "receivedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "acceptedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "rejectedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['qtyRequested', 'requestDate'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/mr/create').val() === true) && ((((newData.child('status/status').val() === 'Created')) || ((root.child('acl/' + auth.uid + '/p/mr/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/mr/edit').val() === true || root.child('acl/' + auth.uid + '/p/mr/approve').val() === true || root.child('acl/' + auth.uid + '/p/gvt/create').val() === true)))) && (((!newData.child('approval/decision').exists() && !newData.child('approval/approverId').exists() && !newData.child('approval/approverName').exists() && !newData.child('approval/decisionAt').exists() && !newData.child('approval/approvalRemarks').exists() && newData.child('approval/approvedQty').val() === 0) || (root.child('acl/' + auth.uid + '/p/mr/approve').val() === true))) && (((!newData.child('move/preparedAt').exists() && newData.child('move/dispatchedQty').val() === 0 && !newData.child('move/dispatchDate').exists()) || ((root.child('acl/' + auth.uid + '/p/mr/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/mr/edit').val() === true)))) && (((newData.child('rcpt/receivedQty').val() === 0 && newData.child('rcpt/acceptedQty').val() === 0 && newData.child('rcpt/rejectedQty').val() === 0) || ((root.child('acl/' + auth.uid + '/p/gvt/create').val() === true || root.child('acl/' + auth.uid + '/p/gvt/edit').val() === true))))))) && ((((newData.child('status/status').val() === data.child('status/status').val())) || (!(newData.child('status/status').val() === 'Approved' || newData.child('status/status').val() === 'Rejected')) || (root.child('acl/' + auth.uid + '/p/mr/approve').val() === true))) && (((newData.child('move/dispatchedQty').val() === 0) || (newData.child('move/dispatchedQty').val() <= newData.child('approval/approvedQty').val() + 0.001))) && (newData.child('rcpt/receivedQty').val() <= newData.child('move/dispatchedQty').val() + 0.001) && (((newData.child('rcpt/acceptedQty').val() + newData.child('rcpt/rejectedQty').val() - newData.child('rcpt/receivedQty').val()) < 0.001 && (newData.child('rcpt/acceptedQty').val() + newData.child('rcpt/rejectedQty').val() - newData.child('rcpt/receivedQty').val()) > -0.001))"
+    }
+   }
+  },
+  "gvtReceipts": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/gvt/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/gvt/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/gvt/edit').val() === true)",
+      "mrId": {},
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "dispatchedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "receiptDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "receivedQty": {
+       ".validate": "newData.isNumber() && newData.val() > 0 && (!data.exists() || newData.val() === data.val())"
+      },
+      "acceptedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0 && (!data.exists() || newData.val() === data.val())"
+      },
+      "rejectedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0 && (!data.exists() || newData.val() === data.val())"
+      },
+      "receivingPerson": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "discrepancy": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "inspectionRemarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['receiptDate', 'receivedQty', 'acceptedQty', 'rejectedQty'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/gvt/create').val() === true)))) && (((!data.exists()) || ((newData.child('core/mrId').val() === data.child('core/mrId').val())))) && (((newData.child('core/acceptedQty').val() + newData.child('core/rejectedQty').val() - newData.child('core/receivedQty').val()) < 0.001 && (newData.child('core/acceptedQty').val() + newData.child('core/rejectedQty').val() - newData.child('core/receivedQty').val()) > -0.001)) && (((newData.parent().parent().parent().child('materialRequests/' + $pid + '/' + newData.child('core/mrId').val() + '/rcpt/receivedQty').val() - root.child('materialRequests/' + $pid + '/' + newData.child('core/mrId').val() + '/rcpt/receivedQty').val() - ((data.exists() ? 0 : newData.child('core/receivedQty').val()))) < 0.001 && (newData.parent().parent().parent().child('materialRequests/' + $pid + '/' + newData.child('core/mrId').val() + '/rcpt/receivedQty').val() - root.child('materialRequests/' + $pid + '/' + newData.child('core/mrId').val() + '/rcpt/receivedQty').val() - ((data.exists() ? 0 : newData.child('core/receivedQty').val()))) > -0.001)) && (((newData.parent().parent().parent().child('materialRequests/' + $pid + '/' + newData.child('core/mrId').val() + '/rcpt/acceptedQty').val() - root.child('materialRequests/' + $pid + '/' + newData.child('core/mrId').val() + '/rcpt/acceptedQty').val() - ((data.exists() ? 0 : newData.child('core/acceptedQty').val()))) < 0.001 && (newData.parent().parent().parent().child('materialRequests/' + $pid + '/' + newData.child('core/mrId').val() + '/rcpt/acceptedQty').val() - root.child('materialRequests/' + $pid + '/' + newData.child('core/mrId').val() + '/rcpt/acceptedQty').val() - ((data.exists() ? 0 : newData.child('core/acceptedQty').val()))) > -0.001)) && (((newData.parent().parent().parent().child('materialRequests/' + $pid + '/' + newData.child('core/mrId').val() + '/rcpt/rejectedQty').val() - root.child('materialRequests/' + $pid + '/' + newData.child('core/mrId').val() + '/rcpt/rejectedQty').val() - ((data.exists() ? 0 : newData.child('core/rejectedQty').val()))) < 0.001 && (newData.parent().parent().parent().child('materialRequests/' + $pid + '/' + newData.child('core/mrId').val() + '/rcpt/rejectedQty').val() - root.child('materialRequests/' + $pid + '/' + newData.child('core/mrId').val() + '/rcpt/rejectedQty').val() - ((data.exists() ? 0 : newData.child('core/rejectedQty').val()))) > -0.001))"
+    }
+   }
+  },
+  "logistics": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/logistics/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/logistics/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/logistics/edit').val() === true)",
+      "materialRef": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "itemId": {
+       ".validate": "newData.isString()"
+      },
+      "pickupLocation": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "destination": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "transportMode": {
+       ".validate": "newData.isString()"
+      },
+      "transporter": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "vehicleDetails": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "assignedPersonId": {
+       ".validate": "newData.isString()"
+      },
+      "pickupDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "expectedDelivery": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "actualDelivery": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "trackingDetails": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "status": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/logistics/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/logistics/edit').val() === true || root.child('acl/' + auth.uid + '/p/logistics/create').val() === true))",
+      "status": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "del": {
+      ".write": "root.child('acl/' + auth.uid + '/p/logistics/delete').val() === true",
+      "deleted": {
+       ".validate": "newData.isBoolean()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['materialRef', 'pickupLocation', 'destination'])) && (newData.child('status').hasChildren(['status'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/logistics/create').val() === true) && (((!newData.child('status/status').exists()) || ((root.child('acl/' + auth.uid + '/p/logistics/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/logistics/edit').val() === true || root.child('acl/' + auth.uid + '/p/logistics/create').val() === true)))) && (!newData.child('del').exists()))))"
+    }
+   }
+  },
+  "travelDesk": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/travel/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/travel/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/travel/edit').val() === true)",
+      "employeeId": {
+       ".validate": "newData.isString()"
+      },
+      "purpose": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "origin": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "destination": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "travelDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "returnDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "transportArrangement": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "accommodation": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "bookingRefs": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "logisticsId": {
+       ".validate": "newData.isString()"
+      },
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "approval": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/travel/approve').val() === true)",
+      "approvalStatus": {},
+      "approverId": {},
+      "approverName": {},
+      "decisionAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "approvalRemarks": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "status": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/travel/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/travel/edit').val() === true || root.child('acl/' + auth.uid + '/p/travel/create').val() === true))",
+      "status": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "del": {
+      ".write": "root.child('acl/' + auth.uid + '/p/travel/delete').val() === true",
+      "deleted": {
+       ".validate": "newData.isBoolean()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['employeeId', 'purpose', 'origin', 'destination', 'travelDate'])) && (newData.child('status').hasChildren(['status'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/travel/create').val() === true) && ((((newData.child('approval/approvalStatus').val() === 'Pending') && !newData.child('approval/approverId').exists() && !newData.child('approval/approverName').exists() && !newData.child('approval/decisionAt').exists() && !newData.child('approval/approvalRemarks').exists()) || (root.child('acl/' + auth.uid + '/p/travel/approve').val() === true))) && (((!newData.child('status/status').exists()) || ((root.child('acl/' + auth.uid + '/p/travel/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/travel/edit').val() === true || root.child('acl/' + auth.uid + '/p/travel/create').val() === true)))) && (!newData.child('del').exists()))))"
+    }
+   }
+  },
+  "gatePasses": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/gatepass/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/gatepass/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/gatepass/edit').val() === true)",
+      "type": {
+       ".validate": "newData.isString()"
+      },
+      "itemId": {
+       ".validate": "newData.isString()"
+      },
+      "itemCode": {},
+      "itemName": {},
+      "qty": {
+       ".validate": "newData.isNumber() && newData.val() > 0"
+      },
+      "serialNumbers": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "destination": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "purpose": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "issueDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "expectedReturn": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "generatedBy": {},
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "status": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/gatepass/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/gatepass/edit').val() === true || root.child('acl/' + auth.uid + '/p/gatepass/approve').val() === true || root.child('acl/' + auth.uid + '/p/gatepass/create').val() === true))",
+      "status": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "approval": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/gatepass/approve').val() === true)",
+      "decision": {},
+      "approverId": {},
+      "approverName": {},
+      "decisionAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "approvalRemarks": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "ret": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/gatepass/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/gatepass/edit').val() === true || root.child('acl/' + auth.uid + '/p/gatepass/create').val() === true))",
+      "returnedQty": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "actualReturn": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "close": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/gatepass/approve').val() === true)",
+      "inspectionRemarks": {},
+      "closedBy": {},
+      "closedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['type', 'qty', 'destination', 'purpose', 'issueDate'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/gatepass/create').val() === true) && (((!newData.child('status/status').exists()) || ((root.child('acl/' + auth.uid + '/p/gatepass/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/gatepass/edit').val() === true || root.child('acl/' + auth.uid + '/p/gatepass/approve').val() === true || root.child('acl/' + auth.uid + '/p/gatepass/create').val() === true)))) && (((!newData.child('approval/decision').exists() && !newData.child('approval/approverId').exists() && !newData.child('approval/approverName').exists() && !newData.child('approval/decisionAt').exists() && !newData.child('approval/approvalRemarks').exists()) || (root.child('acl/' + auth.uid + '/p/gatepass/approve').val() === true))) && (((newData.child('ret/returnedQty').val() === 0 && !newData.child('ret/actualReturn').exists()) || ((root.child('acl/' + auth.uid + '/p/gatepass/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/gatepass/edit').val() === true || root.child('acl/' + auth.uid + '/p/gatepass/create').val() === true)))) && (((!newData.child('close/inspectionRemarks').exists() && !newData.child('close/closedBy').exists() && !newData.child('close/closedAt').exists()) || (root.child('acl/' + auth.uid + '/p/gatepass/approve').val() === true)))))) && (((data.exists()) || ((newData.child('status/status').val() === 'Pending Approval')))) && ((((newData.child('status/status').val() === data.child('status/status').val())) || (!(newData.child('status/status').val() === 'Approved' || newData.child('status/status').val() === 'Rejected' || newData.child('status/status').val() === 'Closed')) || (root.child('acl/' + auth.uid + '/p/gatepass/approve').val() === true))) && ((((newData.child('status/status').val() === data.child('status/status').val())) || (!(newData.child('status/status').val() === 'Issued')) || ((data.child('status/status').val() === 'Approved')))) && (newData.child('ret/returnedQty').val() <= newData.child('core/qty').val() + 0.001) && (((!data.exists()) || ((newData.child('core/type').val() === data.child('core/type').val()))))"
+    }
+   }
+  },
+  "gatePassReturns": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/gatepass/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/gatepass/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      "gatePassId": {},
+      "returnDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "qty": {
+       ".validate": "newData.isNumber() && newData.val() > 0 && (!data.exists() || newData.val() === data.val())"
+      },
+      "condition": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['returnDate', 'qty'])) && (((data.exists()) || (((root.child('acl/' + auth.uid + '/p/gatepass/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/gatepass/edit').val() === true || root.child('acl/' + auth.uid + '/p/gatepass/create').val() === true))))) && (((data.exists()) || ((root.child('gatePasses/' + $pid + '/' + newData.child('core/gatePassId').val() + '/core/type').val() === 'RGP') && ((root.child('gatePasses/' + $pid + '/' + newData.child('core/gatePassId').val() + '/status/status').val() === 'Issued' || root.child('gatePasses/' + $pid + '/' + newData.child('core/gatePassId').val() + '/status/status').val() === 'Partially Returned'))))) && (((newData.parent().parent().parent().child('gatePasses/' + $pid + '/' + newData.child('core/gatePassId').val() + '/ret/returnedQty').val() - root.child('gatePasses/' + $pid + '/' + newData.child('core/gatePassId').val() + '/ret/returnedQty').val() - ((data.exists() ? 0 : newData.child('core/qty').val()))) < 0.001 && (newData.parent().parent().parent().child('gatePasses/' + $pid + '/' + newData.child('core/gatePassId').val() + '/ret/returnedQty').val() - root.child('gatePasses/' + $pid + '/' + newData.child('core/gatePassId').val() + '/ret/returnedQty').val() - ((data.exists() ? 0 : newData.child('core/qty').val()))) > -0.001))"
+    }
+   }
+  },
+  "development": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/development/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/development/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/development/edit').val() === true)",
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "team": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "engineerId": {
+       ".validate": "newData.isString()"
+      },
+      "startDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "expectedCompletion": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "actualCompletion": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "workDescription": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "technicalRemarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "issues": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "revision": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "status": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/development/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/development/edit').val() === true || root.child('acl/' + auth.uid + '/p/development/create').val() === true || root.child('acl/' + auth.uid + '/p/testing/create').val() === true || root.child('acl/' + auth.uid + '/p/testing/edit').val() === true || root.child('acl/' + auth.uid + '/p/testing/updateStatus').val() === true))",
+      "status": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "reopen": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/testing/create').val() === true || root.child('acl/' + auth.uid + '/p/testing/edit').val() === true || root.child('acl/' + auth.uid + '/p/testing/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/development/edit').val() === true))",
+      "reopenCount": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "lastFailedTestId": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/development/create').val() === true) && (((!newData.child('status/status').exists()) || ((root.child('acl/' + auth.uid + '/p/development/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/development/edit').val() === true || root.child('acl/' + auth.uid + '/p/development/create').val() === true || root.child('acl/' + auth.uid + '/p/testing/create').val() === true || root.child('acl/' + auth.uid + '/p/testing/edit').val() === true || root.child('acl/' + auth.uid + '/p/testing/updateStatus').val() === true)))) && (((newData.child('reopen/reopenCount').val() === 0 && !newData.child('reopen/lastFailedTestId').exists()) || ((root.child('acl/' + auth.uid + '/p/testing/create').val() === true || root.child('acl/' + auth.uid + '/p/testing/edit').val() === true || root.child('acl/' + auth.uid + '/p/testing/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/development/edit').val() === true))))))) && (((!data.exists()) || ((newData.child('status/status').val() === data.child('status/status').val())) || ((root.child('acl/' + auth.uid + '/p/development/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/development/edit').val() === true || root.child('acl/' + auth.uid + '/p/development/create').val() === true)) || ((newData.child('status/status').val() === 'Reopened'))))"
+    }
+   }
+  },
+  "developmentUpdates": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/development/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/development/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "date": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "status": {},
+      "revision": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "note": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "issues": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['date', 'note'])) && (((data.exists()) || (((root.child('acl/' + auth.uid + '/p/development/create').val() === true || root.child('acl/' + auth.uid + '/p/development/edit').val() === true || root.child('acl/' + auth.uid + '/p/development/updateStatus').val() === true)))))"
+    }
+   }
+  },
+  "testing": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/testing/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/testing/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/testing/edit').val() === true || root.child('acl/' + auth.uid + '/p/testing/updateStatus').val() === true)) && (!(data.parent().child('status/status').val() === 'Failed' || data.parent().child('status/status').val() === 'Retest Required' || data.parent().child('status/status').val() === 'Approved'))",
+      "itemId": {},
+      "itemCode": {},
+      "itemName": {},
+      "cycle": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "testPlan": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "testDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "engineerId": {
+       ".validate": "newData.isString()"
+      },
+      "environment": {
+       ".validate": "newData.isString() && newData.val().length < 301"
+      },
+      "result": {},
+      "observations": {},
+      "issues": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "status": {
+      ".write": "((root.child('acl/' + auth.uid + '/p/testing/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/testing/edit').val() === true || root.child('acl/' + auth.uid + '/p/testing/create').val() === true || root.child('acl/' + auth.uid + '/p/testing/approve').val() === true)) && (!(data.parent().child('status/status').val() === 'Failed' || data.parent().child('status/status').val() === 'Retest Required' || data.parent().child('status/status').val() === 'Approved'))",
+      "status": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "approval": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/testing/approve').val() === true) && (!(data.parent().child('status/status').val() === 'Failed' || data.parent().child('status/status').val() === 'Retest Required' || data.parent().child('status/status').val() === 'Approved'))",
+      "approverId": {},
+      "approverName": {},
+      "decisionAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (newData.child('core').hasChildren(['testPlan'])) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/testing/create').val() === true) && (((!newData.child('status/status').exists()) || ((root.child('acl/' + auth.uid + '/p/testing/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/testing/edit').val() === true || root.child('acl/' + auth.uid + '/p/testing/create').val() === true || root.child('acl/' + auth.uid + '/p/testing/approve').val() === true)))) && (((!newData.child('approval/approverId').exists() && !newData.child('approval/approverName').exists() && !newData.child('approval/decisionAt').exists()) || (root.child('acl/' + auth.uid + '/p/testing/approve').val() === true)))))) && (((data.exists()) || (root.child('development/' + $pid + '/' + newData.child('core/itemId').val() + '/status/status').val() === 'Completed'))) && ((((newData.child('status/status').val() === data.child('status/status').val())) || (!(newData.child('status/status').val() === 'Approved')) || (root.child('acl/' + auth.uid + '/p/testing/approve').val() === true))) && ((((newData.child('status/status').val() === data.child('status/status').val())) || (!(newData.child('status/status').val() === 'Approved')) || ((data.child('status/status').val() === 'Passed'))))"
+    }
+   }
+  },
+  "closures": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/p/closure/view').val() === true",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/p/closure/view').val() === true && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      ".write": "(root.child('acl/' + auth.uid + '/p/closure/approve').val() === true)",
+      "kind": {},
+      "c_development": {
+       ".validate": "newData.isBoolean()"
+      },
+      "c_testing": {
+       ".validate": "newData.isBoolean()"
+      },
+      "c_material": {
+       ".validate": "newData.isBoolean()"
+      },
+      "c_procurement": {
+       ".validate": "newData.isBoolean()"
+      },
+      "c_payments": {
+       ".validate": "newData.isBoolean()"
+      },
+      "c_rgp": {
+       ".validate": "newData.isBoolean()"
+      },
+      "c_nrgp": {
+       ".validate": "newData.isBoolean()"
+      },
+      "c_documents": {
+       ".validate": "newData.isBoolean()"
+      },
+      "c_approval": {
+       ".validate": "newData.isBoolean()"
+      },
+      "unresolved": {},
+      "override": {
+       ".validate": "newData.isBoolean()"
+      },
+      "overrideReason": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "completionDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "approvedBy": {},
+      "approvedByName": {},
+      "finalRemarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "reason": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "cancellationDate": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "materialStatus": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "stockReturnStatus": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "procurementCancellationStatus": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "vendorCommitments": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "paymentSettlementStatus": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "outstandingLiabilities": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "gatePassStatus": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "previousStatus": {},
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (((data.exists()) || ((root.child('acl/' + auth.uid + '/p/closure/approve').val() === true)))) && (((newData.child('core/kind').val() !== 'completion') || (newData.child('core/c_development').val() === true && newData.child('core/c_testing').val() === true && newData.child('core/c_material').val() === true && newData.child('core/c_procurement').val() === true && newData.child('core/c_payments').val() === true && newData.child('core/c_rgp').val() === true && newData.child('core/c_nrgp').val() === true && newData.child('core/c_documents').val() === true && newData.child('core/c_approval').val() === true) || (newData.child('core/override').val() === true && newData.child('core/overrideReason').val().length >= 5))) && (newData.child('core/kind').val() === $id)"
+    }
+   }
+  },
+  "stages": {
+   ".read": "root.child('acl/' + auth.uid + '/scope').val() === 'all' && root.child('acl/' + auth.uid + '/userId').isString()",
+   "$pid": {
+    ".read": "root.child('acl/' + auth.uid + '/userId').isString() && (root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))",
+    "$id": {
+     ".write": "auth != null && !data.exists() && newData.exists()",
+     "core": {
+      "itemId": {},
+      "branch": {},
+      "key": {},
+      "name": {},
+      "module": {},
+      "seq": {
+       ".validate": "newData.isNumber() && newData.val() >= 0"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "plan": {
+      ".write": "root.child('acl/' + auth.uid + '/p/' + data.parent().child('core/module').val() + '/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/' + data.parent().child('core/module').val() + '/edit').val() === true || root.child('acl/' + auth.uid + '/p/' + data.parent().child('core/module').val() + '/approve').val() === true || root.child('acl/' + auth.uid + '/p/items/edit').val() === true || root.child('acl/' + auth.uid + '/p/projects/edit').val() === true",
+      "deptId": {
+       ".validate": "newData.isString()"
+      },
+      "personId": {
+       ".validate": "newData.isString()"
+      },
+      "expStart": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "expEnd": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "remarks": {
+       ".validate": "newData.isString() && newData.val().length < 5001"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "status": {
+      ".write": "root.child('acl/' + auth.uid + '/p/' + data.parent().child('core/module').val() + '/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/' + data.parent().child('core/module').val() + '/create').val() === true || root.child('acl/' + auth.uid + '/p/' + data.parent().child('core/module').val() + '/edit').val() === true || root.child('acl/' + auth.uid + '/p/' + data.parent().child('core/module').val() + '/approve').val() === true || (data.parent().child('core/key').val() === 'development' && (root.child('acl/' + auth.uid + '/p/testing/create').val() === true || root.child('acl/' + auth.uid + '/p/testing/edit').val() === true || root.child('acl/' + auth.uid + '/p/testing/updateStatus').val() === true))",
+      "status": {
+       ".validate": "newData.isString()"
+      },
+      "actStart": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "actEnd": {
+       ".validate": "newData.isString() && newData.val().length === 10"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "meta": {
+      ".write": "auth != null",
+      "createdAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "updatedAt": {
+       ".validate": "newData.isNumber()"
+      },
+      "createdBy": {
+       ".validate": "newData.isString()"
+      },
+      "updatedBy": {
+       ".validate": "newData.isString()"
+      },
+      "_v": {
+       ".validate": "newData.isNumber()"
+      },
+      "_log": {
+       ".validate": "newData.isString()"
+      },
+      "$other": {
+       ".validate": false
+      }
+     },
+     "$other": {
+      ".validate": false
+     },
+     ".validate": "(((root.child('acl/' + auth.uid + '/scope').val() === 'all' || root.child('acl/' + auth.uid + '/prj/' + $pid).val() === true || root.child('projects/' + $pid + '/core/managerId').val() === root.child('acl/' + auth.uid + '/userId').val() || (root.child('acl/' + auth.uid + '/scope').val() === 'dept' && root.child('acl/' + auth.uid + '/d/' + root.child('projects/' + $pid + '/core/departmentId').val()).val() === true))) && ((newData.child('meta/updatedAt').val() === now && newData.child('meta/updatedBy').val() === root.child('acl/' + auth.uid + '/userId').val()) && (newData.child('meta/_v').val() === (data.exists() ? data.child('meta/_v').val() + 1 : 1)) && (data.exists() ? (newData.child('meta/createdAt').val() === data.child('meta/createdAt').val() && newData.child('meta/createdBy').val() === data.child('meta/createdBy').val()) : (newData.child('meta/createdAt').val() === now && newData.child('meta/createdBy').val() === root.child('acl/' + auth.uid + '/userId').val())) && (newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('at').val() === now && newData.parent().parent().parent().child('activityLogs/' + $pid + '/' + newData.child('meta/_log').val()).child('rid').val() === $id)) && (((data.exists()) || (((root.child('acl/' + auth.uid + '/p/inventory/create').val() === true || root.child('acl/' + auth.uid + '/p/inventory/edit').val() === true || root.child('acl/' + auth.uid + '/p/procurement/create').val() === true || root.child('acl/' + auth.uid + '/p/procurement/approve').val() === true || root.child('acl/' + auth.uid + '/p/items/create').val() === true || root.child('acl/' + auth.uid + '/p/items/edit').val() === true)))))) && (((!data.exists()) || ((newData.child('status/status').val() === data.child('status/status').val())) || (!(newData.child('status/status').val() === 'Completed')) || (root.child('acl/' + auth.uid + '/p/' + data.child('core/module').val() + '/updateStatus').val() === true || root.child('acl/' + auth.uid + '/p/' + data.child('core/module').val() + '/approve').val() === true)))"
+    }
+   }
+  }
+ }
+}

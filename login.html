@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in — ProjectFlow 360</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/login.css">
+</head>
+<body class="login">
+  <main class="login-wrap">
+    <section class="login-brand" aria-hidden="false">
+      <img src="assets/logo.svg" alt="" width="52" height="52">
+      <h1>ProjectFlow 360</h1>
+      <p class="lead">Every project, every item, every purchase and every stock movement — from the first requirement to final closure.</p>
+      <ol class="route" aria-label="What the system tracks">
+        <li><b>Availability</b><span>in-house stock is checked first</span></li>
+        <li><b>Transfer and replenish</b><span>stock moved to the project is always re-ordered for its source</span></li>
+        <li><b>Procure</b><span>PR, approval, quotations, PO, payment, dispatch</span></li>
+        <li><b>Receive and move</b><span>SPIF, GVT, gate passes</span></li>
+        <li><b>Develop, test, close</b><span>with a full audit trail</span></li>
+      </ol>
+    </section>
+    <section class="login-card" id="card" aria-live="polite">
+      <div class="loading" style="min-height:260px"><div><div class="spinner"></div><p style="margin-top:12px">Connecting…</p></div></div>
+    </section>
+  </main>
+  <noscript><p style="padding:24px">ProjectFlow 360 needs JavaScript. Please enable it in your browser.</p></noscript>
+  <script type="module" src="js/login.js"></script>
+</body>
+</html>
